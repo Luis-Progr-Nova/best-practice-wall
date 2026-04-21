@@ -259,7 +259,7 @@ function renderStats(){
   var fl=filtered();
   document.getElementById('sE').textContent=fl.length;
   if(fl.length){var s=0;fl.forEach(function(e){s+=e.r});document.getElementById('sA').textContent=(s/fl.length).toFixed(1)}else{document.getElementById('sA').textContent='\u2014'}
-  var p={},si={};fl.forEach(function(e){p[e.name]=1;if(e.loc)si[e.loc]=1});
+  var p={},si={};fl.forEach(function(e){p[e.name+'|||'+e.loc]=1;if(e.loc)si[e.loc]=1});
   document.getElementById('sP').textContent=Object.keys(p).length;
   document.getElementById('sS').textContent=Object.keys(si).length;
 }
@@ -273,7 +273,7 @@ function renderLeaderboard(){
 function renderPeopleRanking(fl){
   var people={};
   fl.forEach(function(e){
-    var key=e.name;
+    var key=e.name+'|||'+e.loc;
     if(!people[key])people[key]={name:e.name,loc:e.loc,count:0,totalR:0};
     people[key].count++;
     people[key].totalR+=e.r;
