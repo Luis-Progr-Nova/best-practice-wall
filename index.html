@@ -201,9 +201,10 @@ function loadData(){
 }
 
 function parseCSV(csv){
-  var lines=csv.split('\n');if(lines.length<2)return[];var res=[];
-  for(var i=1;i<lines.length;i++){
-    var c=parseLine(lines[i]);
+  var rows=parseCSVRows(csv);
+  if(rows.length<2)return[];var res=[];
+  for(var i=1;i<rows.length;i++){
+    var c=rows[i];
     if(V2_MODE){if(c.length<6)continue;var name=c[1].trim(),loc=c[2].trim(),prac=c[3].trim(),val=c[4].trim(),rat=parseInt(c[5].trim())||3;var grp=''}
     else{if(c.length<7)continue;var grp=c[1].trim(),name=c[2].trim(),loc=c[3].trim(),prac=c[4].trim(),val=c[5].trim(),rat=parseInt(c[6].trim())||3}
     var nv=val,lv=val.toLowerCase().replace(/\s+/g,' ');
@@ -212,7 +213,25 @@ function parseCSV(csv){
   }
   return res;
 }
-function parseLine(l){var r=[],c='',q=false;for(var i=0;i<l.length;i++){var ch=l[i];if(q){if(ch==='"'&&l[i+1]==='"'){c+='"';i++}else if(ch==='"'){q=false}else{c+=ch}}else{if(ch==='"'){q=true}else if(ch===','){r.push(c);c=''}else{c+=ch}}}r.push(c);return r}
+function parseCSVRows(text){
+  var rows=[],row=[],cell='',inQ=false;
+  for(var i=0;i<text.length;i++){
+    var ch=text[i],next=text[i+1]||'';
+    if(inQ){
+      if(ch==='"'&&next==='"'){cell+='"';i++}
+      else if(ch==='"'){inQ=false}
+      else{cell+=ch}
+    }else{
+      if(ch==='"'){inQ=true}
+      else if(ch===','){row.push(cell);cell=''}
+      else if(ch==='\r'&&next==='\n'){row.push(cell);cell='';rows.push(row);row=[];i++}
+      else if(ch==='\n'){row.push(cell);cell='';rows.push(row);row=[]}
+      else{cell+=ch}
+    }
+  }
+  if(cell||row.length)rows.push(row.concat([cell]));
+  return rows;
+}
 
 function filtered(){return entries.filter(function(e){return(fGroup==='all'||e.grp===fGroup)&&(fValue==='all'||e.val===fValue)})}
 function initials(n){var p=n.trim().split(/\s+/);return p.length>1?(p[0][0]+p[p.length-1][0]).toUpperCase():n.substring(0,2).toUpperCase()}
@@ -291,7 +310,7 @@ function renderPeopleRanking(fl){
     else if(idx===2)rankHtml='<div class="medal" style="color:rgba(205,127,50,0.8)">&#9733;</div>';
     else rankHtml='<div class="lb-rank">'+(idx+1)+'</div>';
     var row=document.createElement('div');row.className='lb-row';row.style.animationDelay=(idx*.04)+'s';
-    row.innerHTML=rankHtml+'<div class="lb-info"><div class="lb-name">'+esc(p.name)+'</div><div class="lb-meta">'+esc(p.loc)+'</div></div><div class="lb-bar-wrap"><div class="lb-bar gold" style="--bar-w:'+pct+'%;width:'+pct+'%"></div></div><div style="text-align:right"><div class="lb-count">'+p.count+'</div><div class="lb-count-label">entries</div></div><div class="lb-avg">'+avg+' &#9733;</div>';
+    row.innerHTML=rankHtml+'<div class="lb-info"><div class="lb-name">'+esc(p.name)+' <span style="color:var(--text-muted);font-weight:500;font-size:12px">\u00B7 '+esc(p.loc)+'</span></div></div><div class="lb-bar-wrap"><div class="lb-bar gold" style="--bar-w:'+pct+'%;width:'+pct+'%"></div></div><div style="text-align:right"><div class="lb-count">'+p.count+'</div><div class="lb-count-label">entries</div></div><div class="lb-avg">'+avg+' &#9733;</div>';
     el.appendChild(row);
   });
   if(!sorted.length)el.innerHTML='<div style="color:var(--text-muted);font-size:14px;padding:20px">No entries yet.</div>';
