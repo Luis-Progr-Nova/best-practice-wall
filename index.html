@@ -11,7 +11,7 @@
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes glowPulse{0%,100%{opacity:0.15}50%{opacity:0.35}}
 @keyframes barGrow{from{width:0}to{width:var(--bar-w)}}
-:root{--bg-void:#050810;--bg-surface:#0c1224;--bg-card:#0f1630;--border-subtle:rgba(255,255,255,0.04);--border-light:rgba(255,255,255,0.07);--border-accent:rgba(6,214,160,0.12);--accent:#06d6a0;--accent-dim:rgba(6,214,160,0.08);--accent-gold:#f0b429;--text-bright:#f4f6fb;--text-primary:#e0e4ed;--text-sec:#7b86a0;--text-muted:#4a5370;--v-enth:#f43f5e;--v-enth-bg:rgba(244,63,94,0.08);--v-enth-glow:rgba(244,63,94,0.04);--v-exc:#3b82f6;--v-exc-bg:rgba(59,130,246,0.08);--v-exc-glow:rgba(59,130,246,0.04);--v-ts:#06d6a0;--v-ts-bg:rgba(6,214,160,0.08);--v-ts-glow:rgba(6,214,160,0.04);--v-int:#a78bfa;--v-int-bg:rgba(167,139,250,0.08);--v-int-glow:rgba(167,139,250,0.04);--v-ent:#f0b429;--v-ent-bg:rgba(240,180,41,0.08);--v-ent-glow:rgba(240,180,41,0.04);--v-res:#ec4899;--v-res-bg:rgba(236,72,153,0.08);--v-res-glow:rgba(236,72,153,0.04)}
+:root{--bg-void:#050810;--bg-surface:#0c1224;--bg-card:#0f1630;--border-subtle:rgba(255,255,255,0.04);--border-light:rgba(255,255,255,0.07);--border-accent:rgba(6,214,160,0.12);--accent:#06d6a0;--accent-dim:rgba(6,214,160,0.08);--accent-gold:#f0b429;--text-bright:#ffffff;--text-primary:#edf0f7;--text-sec:#b0b8cc;--text-muted:#8891a8;--v-enth:#f43f5e;--v-enth-bg:rgba(244,63,94,0.08);--v-enth-glow:rgba(244,63,94,0.04);--v-exc:#3b82f6;--v-exc-bg:rgba(59,130,246,0.08);--v-exc-glow:rgba(59,130,246,0.04);--v-ts:#06d6a0;--v-ts-bg:rgba(6,214,160,0.08);--v-ts-glow:rgba(6,214,160,0.04);--v-int:#a78bfa;--v-int-bg:rgba(167,139,250,0.08);--v-int-glow:rgba(167,139,250,0.04);--v-ent:#f0b429;--v-ent-bg:rgba(240,180,41,0.08);--v-ent-glow:rgba(240,180,41,0.04);--v-res:#ec4899;--v-res-bg:rgba(236,72,153,0.08);--v-res-glow:rgba(236,72,153,0.04)}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg-void);color:var(--text-primary);font-family:'Inter',system-ui,sans-serif;min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased}
 .atmo{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
@@ -87,7 +87,11 @@ body{background:var(--bg-void);color:var(--text-primary);font-family:'Inter',sys
 
 /* === LEADERBOARD === */
 .lb{display:none;padding-bottom:3rem}
-.lb-section{margin-bottom:2.5rem}
+.lb-tabs{display:flex;gap:4px;background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:12px;padding:4px;margin-bottom:2rem;width:fit-content}
+.lb-tab{padding:9px 22px;border-radius:9px;border:none;background:transparent;font-family:'Sora',sans-serif;font-size:12px;font-weight:600;letter-spacing:.3px;color:var(--text-muted);cursor:pointer;transition:all .2s}
+.lb-tab:hover{color:var(--text-sec)}
+.lb-tab.on{background:var(--bg-card);color:var(--text-bright);box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.lb-section{}
 .lb-title{font-family:'Sora',sans-serif;font-size:16px;font-weight:600;color:var(--text-bright);margin-bottom:16px;letter-spacing:-.2px}
 .lb-row{display:flex;align-items:center;gap:16px;padding:14px 20px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:14px;margin-bottom:8px;transition:all .3s;animation:cardReveal .4s cubic-bezier(.16,1,.3,1) both}
 .lb-row:hover{border-color:var(--border-light);background:rgba(15,22,48,.8)}
@@ -157,14 +161,12 @@ body{background:var(--bg-void);color:var(--text-primary);font-family:'Inter',sys
 
 <!-- LEADERBOARD VIEW -->
 <div class="lb" id="lbView">
-<div class="lb-section">
-<div class="lb-title">Top contributors</div>
-<div id="lbPeople"></div>
+<div class="lb-tabs" id="lbTabs">
+<button class="lb-tab on" onclick="setLBTab('all')">All sessions</button>
+<button class="lb-tab" onclick="setLBTab('session')">This session</button>
+<button class="lb-tab" onclick="setLBTab('groups')">Group battle</button>
 </div>
-<div class="lb-section">
-<div class="lb-title">Session ranking</div>
-<div id="lbSessions"></div>
-</div>
+<div class="lb-section" id="lbContent"></div>
 </div>
 
 <div class="foot"><div class="foot-t"><span class="foot-b">RECARO Aircraft Seating</span><span class="foot-l"></span><span class="foot-b">Jenewein AG</span><span class="foot-l"></span><span>Values4Success 2026</span></div></div>
@@ -202,15 +204,17 @@ function loadData(){
 
 function parseCSV(csv){
   var rows=parseCSVRows(csv);
-  if(rows.length<2)return[];var res=[];
+  if(rows.length<2)return[];var res=[],skipped=[];
   for(var i=1;i<rows.length;i++){
     var c=rows[i];
-    if(V2_MODE){if(c.length<6)continue;var name=c[1].trim(),loc=c[2].trim(),prac=c[3].trim(),val=c[4].trim(),rat=parseInt(c[5].trim())||3;var grp=''}
-    else{if(c.length<7)continue;var grp=c[1].trim(),name=c[2].trim(),loc=c[3].trim(),prac=c[4].trim(),val=c[5].trim(),rat=parseInt(c[6].trim())||3}
+    if(V2_MODE){if(c.length<6){skipped.push({row:i+1,cols:c.length,data:c.join(' | ')});continue}var name=c[1].trim(),loc=c[2].trim(),prac=c[3].trim(),val=c[4].trim(),rat=parseInt(c[5].trim())||3;var grp=''}
+    else{if(c.length<7){skipped.push({row:i+1,cols:c.length,data:c.join(' | ')});continue}var grp=c[1].trim(),name=c[2].trim(),loc=c[3].trim(),prac=c[4].trim(),val=c[5].trim(),rat=parseInt(c[6].trim())||3}
     var nv=val,lv=val.toLowerCase().replace(/\s+/g,' ');
     for(var k in VM){if(lv.indexOf(k)!==-1){nv=VM[k];break}}
     if(prac)res.push({grp:grp,name:name,loc:loc,val:nv,txt:prac,r:Math.min(5,Math.max(1,rat))});
   }
+  if(skipped.length){console.warn('SKIPPED ROWS:');skipped.forEach(function(s){console.warn('Row '+s.row+' ('+s.cols+' cols): '+s.data)})}
+  console.log('Parsed: '+res.length+' of '+(rows.length-1)+' rows');
   return res;
 }
 function parseCSVRows(text){
@@ -283,65 +287,95 @@ function renderStats(){
   document.getElementById('sS').textContent=Object.keys(si).length;
 }
 
-function renderLeaderboard(){
-  var fl=filtered();
-  renderPeopleRanking(fl);
-  renderSessionRanking(fl);
+var lbTab='all';
+function setLBTab(t){
+  lbTab=t;
+  document.querySelectorAll('.lb-tab').forEach(function(b,i){b.classList.toggle('on',['all','session','groups'][i]===t)});
+  renderLeaderboard();
 }
 
-function renderPeopleRanking(fl){
+function renderLeaderboard(){
+  var el=document.getElementById('lbContent');el.innerHTML='';
+  if(lbTab==='all')renderPeopleAll(el);
+  else if(lbTab==='session')renderPeopleSession(el);
+  else renderGroupBattle(el);
+}
+
+function renderPeopleAll(el){
+  var title=document.createElement('div');title.className='lb-title';title.textContent='Top contributors \u2014 all sessions';el.appendChild(title);
+  var container=document.createElement('div');el.appendChild(container);
+  var people={};
+  entries.forEach(function(e){
+    var key=e.name+'|||'+e.loc;
+    if(!people[key])people[key]={name:e.name,loc:e.loc,count:0,totalR:0,groups:{}};
+    people[key].count++;people[key].totalR+=e.r;
+    if(e.grp)people[key].groups[e.grp]=true;
+  });
+  var sorted=Object.values(people).sort(function(a,b){return b.count-a.count||b.totalR-a.totalR});
+  var maxC=sorted.length?sorted[0].count:1;
+  sorted.forEach(function(p,idx){
+    var pct=Math.round((p.count/maxC)*100);
+    var avg=(p.totalR/p.count).toFixed(1);
+    var grps=Object.keys(p.groups).sort().join(', ');
+    container.appendChild(makeRow(idx,p.name,p.loc+' \u00B7 '+grps,pct,'gold',p.count,'entries',avg));
+  });
+  if(!sorted.length)container.innerHTML='<div style="color:var(--text-muted);font-size:14px;padding:20px">No entries yet.</div>';
+}
+
+function renderPeopleSession(el){
+  var grpLabel=fGroup==='all'?'all sessions':fGroup;
+  var title=document.createElement('div');title.className='lb-title';title.textContent='Top contributors \u2014 '+grpLabel;el.appendChild(title);
+  var hint=document.createElement('div');hint.style.cssText='font-size:13px;color:var(--text-muted);margin-bottom:16px';
+  if(fGroup==='all')hint.textContent='Select a session in the filter above to see a single group.';
+  el.appendChild(hint);
+  var container=document.createElement('div');el.appendChild(container);
+  var fl=entries.filter(function(e){return fGroup==='all'||e.grp===fGroup});
   var people={};
   fl.forEach(function(e){
     var key=e.name+'|||'+e.loc;
     if(!people[key])people[key]={name:e.name,loc:e.loc,count:0,totalR:0};
-    people[key].count++;
-    people[key].totalR+=e.r;
+    people[key].count++;people[key].totalR+=e.r;
   });
   var sorted=Object.values(people).sort(function(a,b){return b.count-a.count||b.totalR-a.totalR});
-  var maxCount=sorted.length?sorted[0].count:1;
-  var el=document.getElementById('lbPeople');el.innerHTML='';
-  var medals=['','&#9733;','&#9733;','&#9733;'];
+  var maxC=sorted.length?sorted[0].count:1;
   sorted.forEach(function(p,idx){
-    var pct=Math.round((p.count/maxCount)*100);
+    var pct=Math.round((p.count/maxC)*100);
     var avg=(p.totalR/p.count).toFixed(1);
-    var rankHtml;
-    if(idx===0)rankHtml='<div class="medal" style="color:var(--accent-gold)">&#9733;</div>';
-    else if(idx===1)rankHtml='<div class="medal" style="color:var(--text-sec)">&#9733;</div>';
-    else if(idx===2)rankHtml='<div class="medal" style="color:rgba(205,127,50,0.8)">&#9733;</div>';
-    else rankHtml='<div class="lb-rank">'+(idx+1)+'</div>';
-    var row=document.createElement('div');row.className='lb-row';row.style.animationDelay=(idx*.04)+'s';
-    row.innerHTML=rankHtml+'<div class="lb-info"><div class="lb-name">'+esc(p.name)+' <span style="color:var(--text-muted);font-weight:500;font-size:12px">\u00B7 '+esc(p.loc)+'</span></div></div><div class="lb-bar-wrap"><div class="lb-bar gold" style="--bar-w:'+pct+'%;width:'+pct+'%"></div></div><div style="text-align:right"><div class="lb-count">'+p.count+'</div><div class="lb-count-label">entries</div></div><div class="lb-avg">'+avg+' &#9733;</div>';
-    el.appendChild(row);
+    container.appendChild(makeRow(idx,p.name,p.loc,pct,'gold',p.count,'entries',avg));
   });
-  if(!sorted.length)el.innerHTML='<div style="color:var(--text-muted);font-size:14px;padding:20px">No entries yet.</div>';
+  if(!sorted.length)container.innerHTML='<div style="color:var(--text-muted);font-size:14px;padding:20px">No entries yet.</div>';
 }
 
-function renderSessionRanking(fl){
+function renderGroupBattle(el){
+  var title=document.createElement('div');title.className='lb-title';title.textContent='Group battle \u2014 which group shared the most?';el.appendChild(title);
+  var container=document.createElement('div');el.appendChild(container);
   var sessions={};
-  // Use ALL entries (not filtered by value) for session ranking, but respect group filter
-  var sessionData=entries.filter(function(e){return fGroup==='all'||e.grp===fGroup});
-  sessionData.forEach(function(e){
+  entries.forEach(function(e){
     if(!e.grp)return;
-    if(!sessions[e.grp])sessions[e.grp]={grp:e.grp,count:0,totalR:0};
-    sessions[e.grp].count++;
-    sessions[e.grp].totalR+=e.r;
+    if(!sessions[e.grp])sessions[e.grp]={grp:e.grp,count:0,totalR:0,people:{}};
+    sessions[e.grp].count++;sessions[e.grp].totalR+=e.r;
+    sessions[e.grp].people[e.name+'|||'+e.loc]=true;
   });
   var sorted=Object.values(sessions).sort(function(a,b){return b.count-a.count||b.totalR-a.totalR});
-  var maxCount=sorted.length?sorted[0].count:1;
-  var el=document.getElementById('lbSessions');el.innerHTML='';
+  var maxC=sorted.length?sorted[0].count:1;
   sorted.forEach(function(s,idx){
-    var pct=Math.round((s.count/maxCount)*100);
+    var pct=Math.round((s.count/maxC)*100);
     var avg=s.count?(s.totalR/s.count).toFixed(1):'0';
-    var rankHtml;
-    if(idx===0)rankHtml='<div class="medal" style="color:var(--accent-gold)">&#9733;</div>';
-    else if(idx===1)rankHtml='<div class="medal" style="color:var(--text-sec)">&#9733;</div>';
-    else if(idx===2)rankHtml='<div class="medal" style="color:rgba(205,127,50,0.8)">&#9733;</div>';
-    else rankHtml='<div class="lb-rank">'+(idx+1)+'</div>';
-    var row=document.createElement('div');row.className='lb-row';row.style.animationDelay=(idx*.04)+'s';
-    row.innerHTML=rankHtml+'<div class="lb-info"><div class="lb-name">'+esc(s.grp)+'</div><div class="lb-meta">'+s.count+' entries</div></div><div class="lb-bar-wrap"><div class="lb-bar cyan" style="--bar-w:'+pct+'%;width:'+pct+'%"></div></div><div style="text-align:right"><div class="lb-count">'+avg+'</div><div class="lb-count-label">avg. impact</div></div>';
-    el.appendChild(row);
+    var ppl=Object.keys(s.people).length;
+    container.appendChild(makeRow(idx,s.grp,ppl+' contributors',pct,'cyan',s.count,'entries',avg));
   });
-  if(!sorted.length)el.innerHTML='<div style="color:var(--text-muted);font-size:14px;padding:20px">No session data yet.</div>';
+  if(!sorted.length)container.innerHTML='<div style="color:var(--text-muted);font-size:14px;padding:20px">No session data yet.</div>';
+}
+
+function makeRow(idx,title,subtitle,pct,barColor,countVal,countLabel,avg){
+  var rankHtml;
+  if(idx===0)rankHtml='<div class="medal" style="color:var(--accent-gold)">\u2605</div>';
+  else if(idx===1)rankHtml='<div class="medal" style="color:var(--text-sec)">\u2605</div>';
+  else if(idx===2)rankHtml='<div class="medal" style="color:rgba(205,127,50,0.8)">\u2605</div>';
+  else rankHtml='<div class="lb-rank">'+(idx+1)+'</div>';
+  var row=document.createElement('div');row.className='lb-row';row.style.animationDelay=(idx*.04)+'s';
+  row.innerHTML=rankHtml+'<div class="lb-info"><div class="lb-name">'+esc(title)+'</div><div class="lb-meta">'+esc(subtitle)+'</div></div><div class="lb-bar-wrap"><div class="lb-bar '+barColor+'" style="--bar-w:'+pct+'%;width:'+pct+'%"></div></div><div style="text-align:right"><div class="lb-count">'+countVal+'</div><div class="lb-count-label">'+countLabel+'</div></div><div class="lb-avg">'+avg+' \u2605</div>';
+  return row;
 }
 
 function esc(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
