@@ -287,12 +287,18 @@ function renderStats(){
   document.getElementById('sS').textContent=Object.keys(si).length;
 }
 
-var lbTab='all';
+var lbTab='all',lbSessionGroup='';
 function setLBTab(t){
   lbTab=t;
   document.querySelectorAll('.lb-tab').forEach(function(b,i){b.classList.toggle('on',['all','session','groups'][i]===t)});
+  if(t==='session'&&!lbSessionGroup){
+    // Default to current filter or first available group
+    if(fGroup!=='all')lbSessionGroup=fGroup;
+    else{var g=getGroups();if(g.length)lbSessionGroup=g[0]}
+  }
   renderLeaderboard();
 }
+function getGroups(){var g={};entries.forEach(function(e){if(e.grp)g[e.grp]=true});return Object.keys(g).sort()}
 
 function renderLeaderboard(){
   var el=document.getElementById('lbContent');el.innerHTML='';
@@ -316,20 +322,37 @@ function renderPeopleAll(el){
   sorted.forEach(function(p,idx){
     var pct=Math.round((p.count/maxC)*100);
     var avg=(p.totalR/p.count).toFixed(1);
-    var grps=Object.keys(p.groups).sort().join(', ');
-    container.appendChild(makeRow(idx,p.name,p.loc+' \u00B7 '+grps,pct,'gold',p.count,'entries',avg));
+    var grpList=Object.keys(p.groups).sort();
+    // Show only the single group if person is in one group
+    var grpText=grpList.length===1?grpList[0]:grpList.join(', ');
+    container.appendChild(makeRow(idx,p.name,p.loc+' \u00B7 '+grpText,pct,'gold',p.count,'entries',avg));
   });
   if(!sorted.length)container.innerHTML='<div style="color:var(--text-muted);font-size:14px;padding:20px">No entries yet.</div>';
 }
 
 function renderPeopleSession(el){
-  var grpLabel=fGroup==='all'?'all sessions':fGroup;
-  var title=document.createElement('div');title.className='lb-title';title.textContent='Top contributors \u2014 '+grpLabel;el.appendChild(title);
-  var hint=document.createElement('div');hint.style.cssText='font-size:13px;color:var(--text-muted);margin-bottom:16px';
-  if(fGroup==='all')hint.textContent='Select a session in the filter above to see a single group.';
-  el.appendChild(hint);
+  // Build own group selector inside leaderboard
+  var title=document.createElement('div');title.className='lb-title';title.textContent='Top contributors by session';el.appendChild(title);
+  var groupBar=document.createElement('div');groupBar.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px';
+  var groups=getGroups();
+  groups.forEach(function(g){
+    var btn=document.createElement('button');btn.className='fc'+(lbSessionGroup===g?' on':'');
+    btn.innerHTML=g;
+    btn.onclick=function(){lbSessionGroup=g;renderLeaderboard()};
+    groupBar.appendChild(btn);
+  });
+  el.appendChild(groupBar);
+
+  if(!lbSessionGroup){
+    var hint=document.createElement('div');hint.style.cssText='font-size:14px;color:var(--text-muted);padding:20px';
+    hint.textContent='Select a group above.';el.appendChild(hint);return;
+  }
+
+  var subTitle=document.createElement('div');subTitle.style.cssText='font-size:14px;color:var(--text-sec);margin-bottom:16px;font-weight:500';
+  subTitle.textContent=lbSessionGroup;el.appendChild(subTitle);
+
   var container=document.createElement('div');el.appendChild(container);
-  var fl=entries.filter(function(e){return fGroup==='all'||e.grp===fGroup});
+  var fl=entries.filter(function(e){return e.grp===lbSessionGroup});
   var people={};
   fl.forEach(function(e){
     var key=e.name+'|||'+e.loc;
@@ -343,7 +366,7 @@ function renderPeopleSession(el){
     var avg=(p.totalR/p.count).toFixed(1);
     container.appendChild(makeRow(idx,p.name,p.loc,pct,'gold',p.count,'entries',avg));
   });
-  if(!sorted.length)container.innerHTML='<div style="color:var(--text-muted);font-size:14px;padding:20px">No entries yet.</div>';
+  if(!sorted.length)container.innerHTML='<div style="color:var(--text-muted);font-size:14px;padding:20px">No entries for this group yet.</div>';
 }
 
 function renderGroupBattle(el){
