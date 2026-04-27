@@ -282,23 +282,19 @@ function renderStats(){
   var fl=filtered();
   document.getElementById('sE').textContent=fl.length;
   if(fl.length){var s=0;fl.forEach(function(e){s+=e.r});document.getElementById('sA').textContent=(s/fl.length).toFixed(1)}else{document.getElementById('sA').textContent='\u2014'}
-  var p={},si={};fl.forEach(function(e){p[e.name+'|||'+e.loc]=1;if(e.loc)si[e.loc]=1});
+  var p={},si={};fl.forEach(function(e){p[e.name.trim().toLowerCase()+'|||'+e.loc.trim().toLowerCase()]=1;if(e.loc)si[e.loc]=1});
   document.getElementById('sP').textContent=Object.keys(p).length;
   document.getElementById('sS').textContent=Object.keys(si).length;
 }
 
-var lbTab='all',lbSessionGroup='';
+var lbTab='all';
 function setLBTab(t){
   lbTab=t;
   document.querySelectorAll('.lb-tab').forEach(function(b,i){b.classList.toggle('on',['all','session','groups'][i]===t)});
-  if(t==='session'&&!lbSessionGroup){
-    // Default to current filter or first available group
-    if(fGroup!=='all')lbSessionGroup=fGroup;
-    else{var g=getGroups();if(g.length)lbSessionGroup=g[0]}
-  }
   renderLeaderboard();
 }
 function getGroups(){var g={};entries.forEach(function(e){if(e.grp)g[e.grp]=true});return Object.keys(g).sort()}
+function pkey(e){return e.name.trim().toLowerCase()+'|||'+e.loc.trim().toLowerCase()}
 
 function renderLeaderboard(){
   var el=document.getElementById('lbContent');el.innerHTML='';
@@ -312,7 +308,7 @@ function renderPeopleAll(el){
   var container=document.createElement('div');el.appendChild(container);
   var people={};
   entries.forEach(function(e){
-    var key=e.name+'|||'+e.loc;
+    var key=pkey(e);
     if(!people[key])people[key]={name:e.name,loc:e.loc,count:0,totalR:0,groups:{}};
     people[key].count++;people[key].totalR+=e.r;
     if(e.grp)people[key].groups[e.grp]=true;
@@ -323,39 +319,24 @@ function renderPeopleAll(el){
     var pct=Math.round((p.count/maxC)*100);
     var avg=(p.totalR/p.count).toFixed(1);
     var grpList=Object.keys(p.groups).sort();
-    // Show only the single group if person is in one group
-    var grpText=grpList.length===1?grpList[0]:grpList.join(', ');
+    var grpText=grpList.join(', ');
     container.appendChild(makeRow(idx,p.name,p.loc+' \u00B7 '+grpText,pct,'gold',p.count,'entries',avg));
   });
   if(!sorted.length)container.innerHTML='<div style="color:var(--text-muted);font-size:14px;padding:20px">No entries yet.</div>';
 }
 
 function renderPeopleSession(el){
-  // Build own group selector inside leaderboard
-  var title=document.createElement('div');title.className='lb-title';title.textContent='Top contributors by session';el.appendChild(title);
-  var groupBar=document.createElement('div');groupBar.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px';
-  var groups=getGroups();
-  groups.forEach(function(g){
-    var btn=document.createElement('button');btn.className='fc'+(lbSessionGroup===g?' on':'');
-    btn.innerHTML=g;
-    btn.onclick=function(){lbSessionGroup=g;renderLeaderboard()};
-    groupBar.appendChild(btn);
-  });
-  el.appendChild(groupBar);
-
-  if(!lbSessionGroup){
-    var hint=document.createElement('div');hint.style.cssText='font-size:14px;color:var(--text-muted);padding:20px';
-    hint.textContent='Select a group above.';el.appendChild(hint);return;
+  var grpLabel=fGroup==='all'?'all sessions':fGroup;
+  var title=document.createElement('div');title.className='lb-title';title.textContent='Top contributors \u2014 '+grpLabel;el.appendChild(title);
+  if(fGroup==='all'){
+    var hint=document.createElement('div');hint.style.cssText='font-size:13px;color:var(--text-muted);margin-bottom:16px';
+    hint.textContent='Select a session in the filter above to see a single group.';el.appendChild(hint);
   }
-
-  var subTitle=document.createElement('div');subTitle.style.cssText='font-size:14px;color:var(--text-sec);margin-bottom:16px;font-weight:500';
-  subTitle.textContent=lbSessionGroup;el.appendChild(subTitle);
-
   var container=document.createElement('div');el.appendChild(container);
-  var fl=entries.filter(function(e){return e.grp===lbSessionGroup});
+  var fl=entries.filter(function(e){return fGroup==='all'||e.grp===fGroup});
   var people={};
   fl.forEach(function(e){
-    var key=e.name+'|||'+e.loc;
+    var key=pkey(e);
     if(!people[key])people[key]={name:e.name,loc:e.loc,count:0,totalR:0};
     people[key].count++;people[key].totalR+=e.r;
   });
@@ -377,7 +358,7 @@ function renderGroupBattle(el){
     if(!e.grp)return;
     if(!sessions[e.grp])sessions[e.grp]={grp:e.grp,count:0,totalR:0,people:{}};
     sessions[e.grp].count++;sessions[e.grp].totalR+=e.r;
-    sessions[e.grp].people[e.name+'|||'+e.loc]=true;
+    sessions[e.grp].people[pkey(e)]=true;
   });
   var sorted=Object.values(sessions).sort(function(a,b){return b.count-a.count||b.totalR-a.totalR});
   var maxC=sorted.length?sorted[0].count:1;
